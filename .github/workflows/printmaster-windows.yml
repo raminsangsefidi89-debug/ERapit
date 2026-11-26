@@ -1,0 +1,33 @@
+name: PrintMaster Pro (Windows)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'printmaster_pro/**'
+      - '.github/workflows/printmaster-windows.yml'
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: printmaster_pro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: printmaster_pro/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Launch Qt and verify a rendered preview
+        run: python -m tests.smoke_ui
+      - name: Package single executable
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name PrintMasterPro --add-data "assets;assets" --hidden-import keyring.backends.Windows main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PrintMasterPro-Windows
+          path: printmaster_pro/dist/PrintMasterPro.exe
+          if-no-files-found: error
